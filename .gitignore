@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+.venv/
+.runtime/
+.tools/
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+artifacts/
+*.log
+.env

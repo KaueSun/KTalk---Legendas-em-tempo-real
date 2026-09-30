@@ -1,0 +1,34 @@
+{
+  "name": "ktalk",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Legendas progressivas e tradução local de inglês para PT-BR no Windows",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "setup:electron": "node node_modules/electron/install.js",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "test:python": ".venv/Scripts/python.exe -m unittest discover -s backend/tests -v",
+    "test:desktop": "node scripts/smoke-desktop.mjs",
+    "setup:python": "node scripts/setup-python.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^42.0.0",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}

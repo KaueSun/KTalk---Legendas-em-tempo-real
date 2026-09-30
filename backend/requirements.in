@@ -1,0 +1,9 @@
+faster-whisper>=1.2.1,<2
+# faster-whisper 1.2.x uses av.open(metadata_errors), removed in PyAV 19.
+av>=16,<17
+numpy>=2.2,<3
+scipy>=1.15,<2
+PyAudioWPatch>=0.2.12.7,<0.3; sys_platform == 'win32'
+webrtcvad-wheels>=2.0.14,<3
+sentencepiece>=0.2,<0.3
+soxr>=0.5,<2
