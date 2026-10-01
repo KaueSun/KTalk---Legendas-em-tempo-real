@@ -1,0 +1,28 @@
+appId: br.com.ktalk.desktop
+productName: KTalk
+directories:
+  output: release
+files:
+  - dist/**/*
+  - electron/**/*
+  - assets/**/*
+  - package.json
+  - '!**/*.map'
+extraResources:
+  - from: .runtime/bundle/ktalk-engine
+    to: engine
+asar: true
+npmRebuild: false
+win:
+  icon: assets/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  signExecutable: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  deleteAppDataOnUninstall: false
+  artifactName: KTalk-Setup-${version}.${ext}

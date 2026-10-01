@@ -23,7 +23,7 @@ def main():
         emit("error", message=f"Dependências Python ausentes. Execute node scripts/setup-python.mjs. Detalhe: {error}")
         return 1
     engine = Engine(emit)
-    emit("ready", version="0.2.0")
+    emit("ready", version="0.3.0")
     for line in sys.stdin:
         try:
             if len(line) > 16384:
@@ -49,7 +49,7 @@ def main():
     engine.stop()
     thread = engine.thread
     if thread:
-        thread.join(timeout=4)
+        thread.join(timeout=20)
     return 0
 
 

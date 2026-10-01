@@ -1,0 +1,118 @@
+.library-settings {
+  grid-column: 1 / -1;
+}
+.version-label {
+  font-size: 11px;
+  color: #61786a;
+}
+.check-setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 24px 0 16px;
+}
+.check-setting input {
+  accent-color: var(--green);
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+.check-setting span {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.check-setting b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.check-setting small {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #61786a;
+}
+.library-settings .field {
+  max-width: 280px;
+  margin: 18px 0;
+}
+.maintenance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+.session-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #f9fbf9;
+}
+.session-actions input {
+  min-width: 180px;
+  flex: 1;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  color: var(--ink);
+  font-size: 12px;
+}
+.session-actions small {
+  width: 100%;
+  font-size: 11px;
+  color: #826122;
+}
+.page-heading p,
+.field > span,
+.setting-info p,
+.muted,
+.meter-title > span,
+.meter-device,
+.latency-note p,
+.signal-note p,
+.caption-meta,
+.caption-row p.original,
+.history-note,
+.recent-empty,
+.overlay-bar span,
+.app-header nav button,
+.large-empty p {
+  color: #60766a;
+}
+.notice .text-button {
+  margin-left: auto;
+}
+.stage-empty p,
+.live-original,
+.stage-footer {
+  color: #aec6b8;
+}
+.history-note {
+  align-items: flex-start;
+}
+.history-list {
+  max-height: calc(100dvh - 405px);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.live-page:has(.notice) .recent {
+  display: none;
+}
+@media (max-width: 850px) {
+  .library-settings {
+    grid-column: auto;
+  }
+  .session-actions input {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}

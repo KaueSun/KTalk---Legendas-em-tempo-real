@@ -2,7 +2,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { settings, defaults, timecode, exportTranscript } = require('../electron/shared.cjs');
 
-const sessions = [{ id: 'a', started_at: '2026-09-29T12:00:00Z', source: 'both' }, { id: 'b', started_at: '2026-09-29T13:00:00Z', source: 'system' }];
+const sessions = [
+  { id: 'a', started_at: '2026-09-29T12:00:00Z', source: 'both' },
+  { id: 'b', started_at: '2026-09-29T13:00:00Z', source: 'system' },
+];
 const captions = [
   { session_id: 'a', source: 'microphone', start: 3, end: 4.51, language: 'pt', text: 'Olá, reunião.' },
   { session_id: 'a', source: 'system', start: 1.01, end: 2.6, language: 'en', text: 'Good morning.' },
@@ -11,7 +14,15 @@ const captions = [
 
 test('Settings reject unexpected device IDs, paths, invalid enum and numeric values', () => {
   assert.deepEqual(settings({}), defaults);
-  for (const value of [{ model: '../../other' }, { system: -2 }, { microphone: '1' }, { opacity: NaN }, { fontSize: 100 }, { overlay: 'true' }, { max_seconds: 60 }]) {
+  for (const value of [
+    { model: '../../other' },
+    { system: -2 },
+    { microphone: '1' },
+    { opacity: NaN },
+    { fontSize: 100 },
+    { overlay: 'true' },
+    { max_seconds: 60 },
+  ]) {
     assert.throws(() => settings(value));
   }
   assert.deepEqual(settings({ unknown: 'ignored' }), defaults);
@@ -46,7 +57,14 @@ test('Timecode rounds and carries milliseconds correctly', () => {
 test('Exports use confirmed PT-BR text and TXT retains its English original', () => {
   const translated = [
     { ...captions[0], text: 'Bom', final: false },
-    { ...captions[0], text: 'Bom dia.', original_text: 'Good morning.', language: 'en', target_language: 'pt-BR', final: true },
+    {
+      ...captions[0],
+      text: 'Bom dia.',
+      original_text: 'Good morning.',
+      language: 'en',
+      target_language: 'pt-BR',
+      final: true,
+    },
   ];
   const txt = exportTranscript(translated, sessions, 'txt', 'a');
   assert.match(txt, /\(pt-BR\): Bom dia\./);

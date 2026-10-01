@@ -52,6 +52,8 @@ class Engine:
         session_id = str(uuid.uuid4())
         last_overload = [0.0]
         last_results = {}
+        session_started = False
+        failed = False
 
         def enqueue(source, utterance):
             if monitor_only:
@@ -96,6 +98,7 @@ class Engine:
             started[0] = time.monotonic()
             if not monitor_only:
                 self.emit("session", id=session_id, started_at=datetime.now(timezone.utc).isoformat(), source=settings.source)
+                session_started = True
             self.emit("status", status="monitoring" if monitor_only else "listening",
                       message="Teste de áudio ativo. Fale ou reproduza um som." if monitor_only else "Tradução ao vivo · inglês → PT-BR" if settings.mode == 'translate' else "Transcrição progressiva ativa")
             gate.set()
@@ -138,12 +141,16 @@ class Engine:
         except InterruptedError:
             pass
         except Exception as error:
+            failed = True
             self.emit("error", message=f"Não foi possível legendar: {error}")
         finally:
             self.stop_event.set()
             gate.set()
             for capture in captures:
                 capture.join(timeout=3)
+            if session_started:
+                self.emit('session-ended', id=session_id, ended_at=datetime.now(timezone.utc).isoformat(),
+                          interrupted=failed or any(capture.error for capture in captures))
             # Publish idle only after a new start can be accepted.
             with self.lifecycle_lock:
                 self.thread = None

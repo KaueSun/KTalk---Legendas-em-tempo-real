@@ -16,6 +16,8 @@ class Settings:
     mode: str = 'translate'
     microphone: int | None = None
     system: int | None = None
+    system_name: str | None = None
+    microphone_name: str | None = None
     vad_mode: int = 1
     max_seconds: float = 7.2
     partial_interval: float = 0.6
@@ -32,6 +34,9 @@ class Settings:
         for index in (settings.microphone, settings.system):
             if index is not None and (type(index) is not int or not 0 <= index <= 10000):
                 raise ValueError("Dispositivo de áudio inválido.")
+        for name in (settings.system_name, settings.microphone_name):
+            if name is not None and (not isinstance(name, str) or not 1 <= len(name) <= 256):
+                raise ValueError('Nome do dispositivo inválido.')
         if type(settings.vad_mode) is not int or settings.vad_mode not in range(4):
             raise ValueError("Sensibilidade de voz inválida.")
         if settings.mode not in ('translate', 'caption'):

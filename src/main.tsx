@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { Overlay } from './Overlay';
 import './styles.css';
+import './product.css';
 
 const overlay = window.location.hash === '#overlay';
 if (overlay) document.documentElement.classList.add('overlay-page');

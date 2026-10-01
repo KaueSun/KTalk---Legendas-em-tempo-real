@@ -52,6 +52,25 @@ def list_devices() -> list[dict]:
         ]
 
 
+def resolve_device(manager, pa, source, device_id, name=None):
+    api = manager.get_host_api_info_by_type(pa.paWASAPI)
+    if name:
+        matches = [device for device in manager.get_device_info_generator()
+                   if device['name'] == name and int(device['hostApi']) == int(api['index'])
+                   and device['maxInputChannels'] > 0
+                   and bool(device.get('isLoopbackDevice')) == (source == 'system')]
+        if len(matches) != 1:
+            raise ValueError('O dispositivo escolhido não está disponível ou tem nome duplicado. Atualize a lista e selecione a entrada novamente.')
+        return matches[0]
+    if device_id is not None:
+        return manager.get_device_info_by_index(device_id)
+    if source == 'system':
+        return manager.get_default_wasapi_loopback()
+    if int(api['defaultInputDevice']) < 0:
+        raise ValueError('Nenhum microfone foi encontrado. Conecte um microfone ou escolha Áudio do PC.')
+    return manager.get_device_info_by_index(int(api['defaultInputDevice']))
+
+
 def to_mono_16k(data: bytes, channels: int, sample_rate: int) -> bytes:
     samples = np.frombuffer(data, dtype="<i2").astype(np.float32).reshape(-1, channels).mean(axis=1)
     if sample_rate != 16000:
@@ -90,13 +109,8 @@ class Capture(threading.Thread):
             pa = audio_library()
             vad = VoiceDetector(self.settings.vad_mode)
             with audio_manager() as manager:
-                if self.device_id is not None:
-                    device = manager.get_device_info_by_index(self.device_id)
-                elif self.source == "system":
-                    device = manager.get_default_wasapi_loopback()
-                else:
-                    api = manager.get_host_api_info_by_type(pa.paWASAPI)
-                    device = manager.get_device_info_by_index(int(api["defaultInputDevice"]))
+                device = resolve_device(manager, pa, self.source, self.device_id,
+                                        getattr(self.settings, f'{self.source}_name'))
                 if bool(device.get("isLoopbackDevice")) != (self.source == "system"):
                     raise ValueError("O dispositivo mudou. Atualize a lista de fontes de áudio.")
                 if int(device['hostApi']) != int(manager.get_host_api_info_by_type(pa.paWASAPI)['index']):
@@ -120,6 +134,8 @@ class Capture(threading.Thread):
                     resampler = StreamingResampler(rate, channels, self.settings.mic_gain if self.source == 'microphone' else 1.0)
                     pending = b""
                     last_meter = 0.0
+                    last_audio = time.monotonic()
+                    gap_reset = False
                     while not self.stop.is_set():
                         try:
                             data, captured = raw_queue.get(timeout=0.1)
@@ -128,7 +144,19 @@ class Capture(threading.Thread):
                                 break
                             if not stream.is_active():
                                 raise RuntimeError("A fonte de áudio foi desconectada. Selecione o dispositivo novamente.")
+                            # Some loopback devices stop callbacks entirely during silence.
+                            if not gap_reset and time.monotonic() - last_audio >= 0.4:
+                                tail = segmenter.flush()
+                                if tail:
+                                    self.enqueue(self.source, tail)
+                                pending = b''
+                                vad = VoiceDetector(self.settings.vad_mode)
+                                resampler = StreamingResampler(rate, channels, self.settings.mic_gain if self.source == 'microphone' else 1.0)
+                                self.emit('level', source=self.source, level=0, speech=False, dbfs=-120, clipping=False)
+                                gap_reset = True
                             continue
+                        last_audio = captured
+                        gap_reset = False
                         if overflow.is_set():
                             overflow.clear()
                             self.emit("warning", message="A captura perdeu áudio. Feche outros aplicativos pesados ou use outra fonte.")

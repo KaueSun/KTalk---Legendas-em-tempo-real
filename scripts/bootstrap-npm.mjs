@@ -26,8 +26,13 @@ try {
   if (extract.status !== 0) throw new Error('Não foi possível extrair o npm local.');
 }
 const result = spawnSync(process.execPath, [cli, ...process.argv.slice(2)], {
-  cwd: root, stdio: 'inherit',
-  env: { ...process.env, npm_config_cache: path.join(root, '.cache', 'npm'), electron_config_cache: path.join(root, '.cache', 'electron') },
+  cwd: root,
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    npm_config_cache: path.join(root, '.cache', 'npm'),
+    electron_config_cache: path.join(root, '.cache', 'electron'),
+  },
 });
 if (result.error) console.error(result.error.message);
 process.exit(result.status ?? 1);
