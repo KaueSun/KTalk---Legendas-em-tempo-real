@@ -1,5 +1,6 @@
 export type Source = 'system' | 'microphone' | 'both';
 export type Status = 'idle' | 'preparing' | 'listening' | 'monitoring' | 'stopping';
+export type PreparationStage = 'recognition' | 'translation' | 'audio';
 export interface Preferences {
   source: Source;
   language: string;
@@ -81,9 +82,11 @@ export interface Snapshot {
   sourceInfo: Record<string, SourceInfo>;
   historyAvailable: boolean;
   version: string;
+  preparationStage: PreparationStage | null;
+  preparingAudioTest: boolean;
 }
 export type EngineEvent =
-  | { type: 'status'; status: Status; message: string }
+  | { type: 'status'; status: Status; message: string; stage?: PreparationStage; audioTest?: boolean }
   | { type: 'connection'; connected: boolean }
   | { type: 'devices'; devices: Device[] }
   | ({ type: 'session' } & Session)

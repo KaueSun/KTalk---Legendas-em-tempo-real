@@ -39,6 +39,16 @@ class FakeModel:
 
 
 class EngineTests(unittest.TestCase):
+    def test_preparation_reports_only_relevant_stages(self):
+        with patch('ktalk.engine.Capture', FakeCapture):
+            self.engine.start(Settings(mode='caption'))
+            self.assertTrue(self.caption.wait(2))
+            self.engine.stop()
+            self.assertTrue(self.idle.wait(3))
+        stages = [event.get('stage') for event in self.events
+                  if event['type'] == 'status' and event['status'] == 'preparing']
+        self.assertEqual(stages, ['recognition', 'audio'])
+
     def test_monitor_only_never_loads_models_or_creates_captions(self):
         monitoring = threading.Event()
         original_emit = self.engine.emit

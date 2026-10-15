@@ -67,21 +67,26 @@ class Engine:
                     last_overload[0] = now
 
         try:
-            self.emit("status", status="preparing", message="Abrindo os dispositivos…" if monitor_only else "Preparando reconhecimento e tradução locais…")
+            self.emit("status", status="preparing", stage="audio" if monitor_only else "recognition",
+                      message="Abrindo os dispositivos…" if monitor_only else "Verificando o reconhecimento local…")
             cache = Path(os.environ.get("KTALK_MODEL_DIR", Path.home() / ".cache" / "ktalk"))
             if not monitor_only and (self.model is None or settings.model != self.model_name):
                 # Release the old model before loading a larger one.
                 self.model = None
-                self.model = load_model(settings.model, cache)
+                self.model = load_model(settings.model, cache,
+                    progress=lambda message: self.emit('status', status='preparing', stage='recognition', message=message))
                 self.model_name = settings.model
-            if not monitor_only and settings.mode == 'translate' and self.translator is None and not self.stop_event.is_set():
-                directory = prepare_translation(cache,
-                    progress=lambda message: self.emit('status', status='preparing', message=message),
-                    cancelled=self.stop_event.is_set)
-                self.translator = LocalTranslator(directory)
+            if not monitor_only and settings.mode == 'translate' and not self.stop_event.is_set():
+                self.emit('status', status='preparing', stage='translation', message='Preparando a tradução de inglês para PT-BR…')
+                if self.translator is None:
+                    directory = prepare_translation(cache,
+                        progress=lambda message: self.emit('status', status='preparing', stage='translation', message=message),
+                        cancelled=self.stop_event.is_set)
+                    self.translator = LocalTranslator(directory)
             transcriber = Transcriber(self.model, 'en' if settings.mode == 'translate' else settings.language)
             if self.stop_event.is_set():
                 return
+            self.emit('status', status='preparing', stage='audio', message='Abrindo os dispositivos de áudio…')
             sources = ["system", "microphone"] if settings.source == "both" else [settings.source]
             for source in sources:
                 capture = Capture(source, getattr(settings, source), settings, self.stop_event,

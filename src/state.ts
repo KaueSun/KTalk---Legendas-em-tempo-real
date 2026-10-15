@@ -35,7 +35,9 @@ export const initial: Snapshot = {
   warning: null,
   levels: {},
   historyAvailable: false,
-  version: '0.3.0',
+  version: '0.3.1',
+  preparationStage: null,
+  preparingAudioTest: false,
 };
 
 export function reduceEvent(state: Snapshot, event: EngineEvent): Snapshot {
@@ -45,6 +47,9 @@ export function reduceEvent(state: Snapshot, event: EngineEvent): Snapshot {
         ...state,
         status: event.status,
         message: event.message,
+        preparationStage: event.status === 'preparing' ? event.stage || state.preparationStage : null,
+        preparingAudioTest:
+          event.status === 'preparing' ? (event.audioTest ?? state.preparingAudioTest) : false,
         levels: event.status === 'idle' ? {} : state.levels,
         partials: event.status === 'idle' ? {} : state.partials,
       };

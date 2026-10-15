@@ -1,6 +1,36 @@
 .library-settings {
   grid-column: 1 / -1;
 }
+.preparation-steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 18px;
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  color: #9ab3a7;
+  font-size: 11px;
+}
+.preparation-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.preparation-steps li > span {
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  font-size: 9px;
+  line-height: 13px;
+}
+.preparation-steps .current {
+  color: #ffffff;
+}
+.preparation-steps .done {
+  color: #91d7b6;
+}
 .version-label {
   font-size: 11px;
   color: #61786a;

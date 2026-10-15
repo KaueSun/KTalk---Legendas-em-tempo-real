@@ -47,6 +47,8 @@ let closing = false,
   quitReady = false,
   recoveryAttempts = 0,
   shutdownPromise;
+let startGeneration = 0;
+let cancellingPreparation = false;
 const failures = [];
 const state = {
   status: 'idle',
@@ -64,6 +66,8 @@ const state = {
   levels: {},
   historyAvailable: false,
   version: app.getVersion(),
+  preparationStage: null,
+  preparingAudioTest: false,
 };
 const packagedEngine = app.isPackaged && !process.env.KTALK_PYTHON;
 const backend = new Backend({
@@ -114,15 +118,17 @@ function recordFailure(code, detail = null) {
 
 function flushHistory() {
   clearTimeout(historyTimer);
-  if (!preferences.saveHistory) return;
+  if (!preferences.saveHistory) return true;
   try {
     history.write(state, preferences.retentionDays);
+    return true;
   } catch {
     recordFailure('history-write');
     receive({
       type: 'warning',
       message: 'Não foi possível salvar o histórico local. Exporte os trechos antes de fechar.',
     });
+    return false;
   }
 }
 
@@ -147,6 +153,11 @@ function finishInterruptedSession() {
 
 function receive(event) {
   if (!event || typeof event.type !== 'string') return;
+  if (
+    cancellingPreparation &&
+    ['ready', 'status', 'session', 'caption', 'source-ready', 'level', 'error'].includes(event.type)
+  )
+    return;
   if (event.type === 'ready') {
     state.connected = true;
     broadcast({ type: 'connection', connected: true });
@@ -165,6 +176,9 @@ function receive(event) {
     if (!['idle', 'preparing', 'listening', 'monitoring', 'stopping'].includes(event.status)) return;
     state.status = event.status;
     state.message = event.message;
+    state.preparationStage = event.status === 'preparing' ? event.stage || state.preparationStage : null;
+    state.preparingAudioTest =
+      event.status === 'preparing' ? (event.audioTest ?? state.preparingAudioTest) : false;
     if (event.status === 'idle') {
       state.levels = {};
       state.partials = {};
@@ -273,6 +287,7 @@ function savePreferences(value) {
 
 async function start(value = preferences, monitorOnly = false) {
   if (state.status !== 'idle' || closing) return;
+  const generation = ++startGeneration;
   clearTimeout(retryTimer);
   recoveryAttempts = 0;
   savePreferences(value);
@@ -283,23 +298,50 @@ async function start(value = preferences, monitorOnly = false) {
   state.levels = {};
   overlayWindow?.hide();
   broadcast({ type: 'notice-reset' });
-  receive({ type: 'status', status: 'preparing', message: 'Preparando o motor local…' });
+  receive({
+    type: 'status',
+    status: 'preparing',
+    audioTest: monitorOnly,
+    message: 'Preparando o motor local…',
+  });
   try {
     await backend.ensure();
+    if (generation !== startGeneration) return;
     if (closing || state.status === 'stopping') {
       receive({ type: 'status', status: 'idle', message: 'Preparação cancelada' });
       return;
     }
     backend.send({ type: monitorOnly ? 'monitor' : 'start', settings: preferences });
   } catch (error) {
+    if (generation !== startGeneration || closing) return;
     receive({ type: 'status', status: 'idle', message: 'Não foi possível iniciar' });
     receive({ type: 'error', message: error.message });
   }
 }
 
-function stop() {
+async function stop() {
   if (!['preparing', 'listening', 'monitoring'].includes(state.status)) return;
-  receive({ type: 'status', status: 'stopping', message: 'Finalizando os trechos pendentes…' });
+  const preparing = state.status === 'preparing';
+  receive({
+    type: 'status',
+    status: 'stopping',
+    message: preparing ? 'Cancelando a preparação…' : 'Finalizando os trechos pendentes…',
+  });
+  if (preparing) {
+    ++startGeneration;
+    cancellingPreparation = true;
+    try {
+      // A model download or native conversion can block Python's cooperative stop.
+      await backend.shutdown(1500);
+    } finally {
+      cancellingPreparation = false;
+    }
+    if (!closing) {
+      receive({ type: 'status', status: 'idle', message: 'Preparação cancelada' });
+      connect().catch((error) => receive({ type: 'error', message: error.message }));
+    }
+    return;
+  }
   if (state.connected) {
     try {
       backend.send({ type: 'stop' });
@@ -388,7 +430,7 @@ function registerIpc() {
   });
   ipcMain.handle('ktalk:stop', (event) => {
     trusted(event);
-    stop();
+    return stop();
   });
   ipcMain.handle('ktalk:devices', async (event) => {
     trusted(event);
@@ -524,7 +566,28 @@ async function quit() {
   shutdownPromise = (async () => {
     const graceful = await backend.shutdown();
     if (!graceful) finishInterruptedSession();
-    flushHistory();
+    while (!flushHistory()) {
+      const choice = await dialog
+        .showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Histórico não salvo',
+          message: 'Não foi possível guardar os últimos trechos.',
+          detail:
+            'Mantenha o KTalk aberto para exportar a transcrição ou tente salvar novamente. Fechar sem salvar pode perder os trechos que ainda não foram gravados.',
+          buttons: ['Manter aberto', 'Tentar salvar novamente', 'Fechar sem salvar'],
+          defaultId: 0,
+          cancelId: 0,
+        })
+        .catch(() => ({ response: 0 }));
+      if (choice.response === 1) continue;
+      if (choice.response === 2) break;
+      closing = false;
+      shutdownPromise = null;
+      receive({ type: 'status', status: 'idle', message: 'Exporte o histórico ou tente salvar novamente.' });
+      mainWindow?.show();
+      connect().catch((error) => receive({ type: 'error', message: error.message }));
+      return;
+    }
     globalShortcut.unregisterAll();
     quitReady = true;
     app.quit();

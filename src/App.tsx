@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { clock, initial, languages, reduceEvent, sourceNames } from './state';
 import { LibrarySettings, SessionActions } from './LibrarySettings';
+import { PreparationProgress } from './PreparationProgress';
 import type { Caption, EngineEvent, Preferences, Snapshot, Status } from './types';
 
 type Page = 'live' | 'history' | 'settings';
@@ -574,22 +575,24 @@ export function App() {
                           )}
                         </div>
                         <h2>
-                          {state.status === 'preparing'
-                            ? 'Preparando a escuta…'
-                            : monitoring
-                              ? 'Vamos conferir seu áudio.'
-                              : listening
-                                ? speaking
-                                  ? 'Reconhecendo a fala…'
-                                  : hasSignal
-                                    ? 'Áudio chegando. Aguardando fala.'
-                                    : 'Aguardando sinal de áudio.'
-                                : translate
-                                  ? 'Sua próxima legenda será em português.'
-                                  : 'Sua conversa aparece aqui.'}
+                          {state.status === 'stopping'
+                            ? 'Encerrando a escuta…'
+                            : state.status === 'preparing'
+                              ? 'Preparando a escuta…'
+                              : monitoring
+                                ? 'Vamos conferir seu áudio.'
+                                : listening
+                                  ? speaking
+                                    ? 'Reconhecendo a fala…'
+                                    : hasSignal
+                                      ? 'Áudio chegando. Aguardando fala.'
+                                      : 'Aguardando sinal de áudio.'
+                                  : translate
+                                    ? 'Sua próxima legenda será em português.'
+                                    : 'Sua conversa aparece aqui.'}
                         </h2>
                         <p>
-                          {state.status === 'preparing'
+                          {state.status === 'preparing' || state.status === 'stopping'
                             ? state.message
                             : monitoring
                               ? 'Fale ou reproduza um vídeo. Veja o sinal e a detecção ao lado.'
@@ -599,6 +602,13 @@ export function App() {
                                   ? 'O texto aparece e se ajusta enquanto a pessoa fala.'
                                   : 'Escolha uma fonte, teste o áudio e comece.'}
                         </p>
+                        {state.status === 'preparing' && (
+                          <PreparationProgress
+                            stage={state.preparationStage}
+                            translate={translate}
+                            audioTest={state.preparingAudioTest}
+                          />
+                        )}
                       </div>
                     )}
                   </div>

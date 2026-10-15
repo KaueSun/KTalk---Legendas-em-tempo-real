@@ -29,9 +29,11 @@ Abra o KTalk e siga estes passos:
 
 ## Instalação
 
-No Windows 10 ou 11 de 64 bits, execute `KTalk-Setup-0.3.0.exe`. O instalador inclui o motor de áudio; não é preciso instalar Python ou Node.js para usar o aplicativo.
+No Windows 10 ou 11 de 64 bits, execute `KTalk-Setup-0.3.1.exe`. O instalador inclui o motor de áudio; não é preciso instalar Python ou Node.js para usar o aplicativo.
 
 Na primeira sessão, o KTalk baixa e prepara os modelos de reconhecimento e tradução. Essa etapa precisa de internet e pode levar alguns minutos. Depois, os modelos já preparados funcionam offline. Escolher outro modelo de reconhecimento pode exigir um novo download.
+
+A tela mostra qual etapa está em andamento: reconhecimento, tradução ou abertura dos dispositivos. Você pode cancelar a preparação e tentar novamente depois. Um teste de áudio abre apenas os dispositivos, sem baixar modelos.
 
 O instalador ainda não possui assinatura digital. A versão 0.3 está em validação para uso diário; a compatibilidade com diferentes dispositivos de áudio ainda precisa de testes em mais computadores.
 
@@ -42,6 +44,8 @@ O áudio é processado neste computador e não é gravado. Em **Configurações 
 Você pode guardar sessões por 7, 30 ou 90 dias, até o limite de 2.000 trechos confirmados. A retenção é aplicada ao abrir e salvar o histórico. Desativar o armazenamento apaga a cópia salva. Os arquivos TXT e SRT exportados ficam sob seu controle e não são criptografados pelo KTalk.
 
 Se o motor de voz falhar, o aplicativo tenta reconectar e preserva os trechos confirmados. A captura só volta quando você inicia uma nova sessão. O diagnóstico exportado nas configurações não inclui áudio, transcrições ou nomes dos dispositivos.
+
+Se houver uma falha ao salvar o histórico durante o fechamento, o KTalk permite manter a janela aberta para exportar, tentar salvar novamente ou fechar sem salvar. A opção padrão mantém a transcrição disponível.
 
 ## Desenvolvimento
 

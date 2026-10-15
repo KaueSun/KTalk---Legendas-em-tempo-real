@@ -111,6 +111,51 @@ try {
   await page.waitForTimeout(250);
   await assertFits();
   await page.screenshot({ path: path.join(root, 'artifacts', 'desktop-compact.png'), fullPage: true });
+  // Exercise the bridge and UI at a preparation boundary without starting capture.
+  const preparingPid = await app.evaluate(() => {
+    const child = process
+      ._getActiveHandles()
+      .find(
+        (handle) =>
+          handle.constructor.name === 'ChildProcess' &&
+          (handle.spawnargs?.some((arg) => arg.endsWith('main.py')) ||
+            handle.spawnfile?.endsWith('ktalk-engine.exe')),
+      );
+    if (!child) throw new Error('Owned backend process was not found');
+    child.stdout.emit(
+      'data',
+      JSON.stringify({
+        type: 'status',
+        status: 'preparing',
+        stage: 'translation',
+        message: 'Preparando a tradução de inglês para PT-BR…',
+      }) + '\n',
+    );
+    return child.pid;
+  });
+  await page.getByRole('list', { name: 'Etapas de preparação' }).waitFor();
+  assert.equal(await page.locator('.preparation-steps [aria-current="step"]').innerText(), 'Tradução PT-BR');
+  await assertFits();
+  await page.screenshot({ path: path.join(root, 'artifacts', 'desktop-preparation.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  const cancelled = await waitForState((state) => state.status === 'idle' && state.connected);
+  assert.equal(cancelled.sessions.length, 0);
+  assert.equal(cancelled.preparationStage, null);
+  const resumedPid = await app.evaluate(
+    () =>
+      process
+        ._getActiveHandles()
+        .find(
+          (handle) =>
+            handle.constructor.name === 'ChildProcess' &&
+            (handle.spawnargs?.some((arg) => arg.endsWith('main.py')) ||
+              handle.spawnfile?.endsWith('ktalk-engine.exe')),
+        )?.pid,
+  );
+  assert.ok(resumedPid && resumedPid !== preparingPid, 'Cancellation must reconnect with a fresh motor');
+  console.log(
+    'PASS: preparation stages fit the compact window; cancellation leaves capture stopped and reconnects.',
+  );
   await page.getByRole('button', { name: 'Áudio do PC', exact: true }).click();
   await app.evaluate(({ BrowserWindow }) =>
     BrowserWindow.getAllWindows()
@@ -275,6 +320,40 @@ try {
     await page.getByLabel('Nome da sessão').fill('Conversa de teste');
     await page.getByRole('button', { name: 'Salvar nome', exact: true }).click();
     await waitForState((value) => value.sessions.some((session) => session.title === 'Conversa de teste'));
+    // Simulate a disk failure only for this test instance's encrypted history.
+    await app.evaluate(({ app, dialog }) => {
+      const fs = process.getBuiltinModule('fs');
+      app.__originalRename = fs.renameSync;
+      app.__originalPrompt = dialog.showMessageBox;
+      app.__savePromptSeen = false;
+      fs.renameSync = (...args) => {
+        if (String(args[1]).endsWith('history.encrypted'))
+          throw Object.assign(new Error('Test disk full'), { code: 'ENOSPC' });
+        return app.__originalRename(...args);
+      };
+      dialog.showMessageBox = async (_window, options) => {
+        if (options.title !== 'Histórico não salvo') throw new Error('Unexpected close prompt');
+        app.__savePromptSeen = true;
+        return { response: 0, checkboxChecked: false };
+      };
+      setTimeout(() => app.quit(), 0);
+    });
+    try {
+      const deadline = Date.now() + 15000;
+      while (!(await app.evaluate(({ app }) => app.__savePromptSeen))) {
+        if (Date.now() > deadline) throw new Error('Unsaved history did not prevent closing');
+        await page.waitForTimeout(100);
+      }
+      const preserved = await waitForState((value) => value.connected && value.status === 'idle');
+      assert.equal(preserved.captions.length, state.captions.length);
+      assert.match(preserved.warning, /salvar o histórico/i);
+    } finally {
+      await app.evaluate(({ app, dialog }) => {
+        process.getBuiltinModule('fs').renameSync = app.__originalRename;
+        dialog.showMessageBox = app.__originalPrompt;
+      });
+    }
+    console.log('PASS: a disk failure during shutdown keeps the window and confirmed captions available.');
     // Crash only the child owned by this isolated test instance.
     await app.evaluate(() => {
       const child = process

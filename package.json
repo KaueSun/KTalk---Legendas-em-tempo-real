@@ -1,6 +1,6 @@
 {
   "name": "ktalk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Legendas progressivas e tradução local de inglês para PT-BR no Windows",
   "type": "module",
